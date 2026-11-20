@@ -47,6 +47,9 @@ export function compareVersions(a, b) {
   return pa.pre < pb.pre ? -1 : pa.pre > pb.pre ? 1 : 0
 }
 
+/** Bump when the sync logic changes; surfaced through status for diagnostics. */
+export const CODE_VERSION = 3
+
 export class SyncEngine {
   /**
    * @param {import('@deepseek-ai/cordis').Context} ctx - host plugin context.
@@ -111,6 +114,7 @@ export class SyncEngine {
       excluded: [SELF_NAME, ...this.#excluded().filter(name => name !== SELF_NAME)],
       remoteCount: this.state.remoteCount,
       searchRoots: this.nodeModulesCandidates,
+      codeVersion: CODE_VERSION,
     }
   }
 
