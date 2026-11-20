@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "WebDAV plugin sync",
+    "description": "Sync installed DSH plugins across devices over WebDAV, with merge or overwrite strategy and a plugin exclusion list that excludes this plugin by default.",
+    "detail": "docs/DETAIL.md"
+  }
+}

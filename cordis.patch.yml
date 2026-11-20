@@ -1,0 +1,8 @@
+- insert:
+    - id: webdav-sync
+      name: '@local/dsh-webdav-sync'
+      config:
+        backupDir: dsh-plugin-sync
+        strategy: merge
+        excludedPlugins:
+          - '@local/dsh-webdav-sync'

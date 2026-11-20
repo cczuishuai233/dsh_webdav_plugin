@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "WebDAV 插件同步",
+    "description": "通过 WebDAV 在多台 DSH 之间同步已安装插件：支持合并或覆盖策略、排除指定插件，默认排除本插件自身。",
+    "detail": "docs/DETAIL.md"
+  }
+}
