@@ -6,6 +6,8 @@
  */
 
 import path from 'node:path'
+import { readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import Schema from '@deepseek-ai/schemastery'
 import { SyncEngine, SELF_NAME, DEFAULT_BACKUP_DIR } from './src/host/engine.js'
@@ -35,14 +37,24 @@ export function apply(ctx, config) {
   const markerIndex = here.lastIndexOf(marker)
   const derived = markerIndex >= 0 ? here.slice(0, markerIndex + marker.length) : undefined
 
-  // Where sibling installed plugins live: the profile's node_modules is the
-  // authoritative home (DSH exposes it via DSH_PROFILE_DIR); the directory
-  // this package is physically loaded from covers linked development setups.
+  // Where sibling installed plugins live. The profile's node_modules is the
+  // authoritative home; DSH injects DSH_PROFILE_DIR into shell tools, but the
+  // Host process itself may lack it, and a linked development checkout loads
+  // this file from the workspace — so also derive from the module location and
+  // finally scan every profile under ~/.dsh/profiles.
   const candidates = []
   const profileDir = process.env.DSH_PROFILE_DIR
   if (typeof profileDir === 'string' && profileDir.length > 0) candidates.push(path.join(profileDir, 'node_modules'))
   if (derived !== undefined) candidates.push(derived)
   candidates.push(path.resolve(here, '..'))
+  try {
+    const profilesRoot = path.join(homedir(), '.dsh', 'profiles')
+    for (const entry of readdirSync(profilesRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) candidates.push(path.join(profilesRoot, entry.name, 'node_modules'))
+    }
+  } catch {
+    // No readable profiles root: the remaining candidates still apply.
+  }
   const nodeModulesCandidates = [...new Set(candidates)]
 
   const engine = new SyncEngine(ctx, () => config, nodeModulesCandidates)

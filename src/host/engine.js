@@ -110,6 +110,7 @@ export class SyncEngine {
       deviceName: this.#deviceName(),
       excluded: [SELF_NAME, ...this.#excluded().filter(name => name !== SELF_NAME)],
       remoteCount: this.state.remoteCount,
+      searchRoots: this.nodeModulesCandidates,
     }
   }
 
