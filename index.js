@@ -33,11 +33,19 @@ export function apply(ctx, config) {
   const here = path.dirname(fileURLToPath(import.meta.url))
   const marker = `${path.sep}node_modules${path.sep}`
   const markerIndex = here.lastIndexOf(marker)
-  const profileNodeModules = markerIndex >= 0
-    ? here.slice(0, markerIndex + marker.length)
-    : path.resolve(here, '..')
+  const derived = markerIndex >= 0 ? here.slice(0, markerIndex + marker.length) : undefined
 
-  const engine = new SyncEngine(ctx, () => config, profileNodeModules)
+  // Where sibling installed plugins live: the profile's node_modules is the
+  // authoritative home (DSH exposes it via DSH_PROFILE_DIR); the directory
+  // this package is physically loaded from covers linked development setups.
+  const candidates = []
+  const profileDir = process.env.DSH_PROFILE_DIR
+  if (typeof profileDir === 'string' && profileDir.length > 0) candidates.push(path.join(profileDir, 'node_modules'))
+  if (derived !== undefined) candidates.push(derived)
+  candidates.push(path.resolve(here, '..'))
+  const nodeModulesCandidates = [...new Set(candidates)]
+
+  const engine = new SyncEngine(ctx, () => config, nodeModulesCandidates)
 
   const json = (data, status = 200) => new Response(JSON.stringify(data), {
     status,

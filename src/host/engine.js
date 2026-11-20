@@ -51,12 +51,13 @@ export class SyncEngine {
   /**
    * @param {import('@deepseek-ai/cordis').Context} ctx - host plugin context.
    * @param {() => Record<string, unknown>} getConfig - current plugin config.
-   * @param {string} profileNodeModules - absolute path of the profile's node_modules.
+   * @param {string[]} nodeModulesCandidates - candidate node_modules roots that
+   *   may hold sibling installed plugins, most reliable first.
    */
-  constructor(ctx, getConfig, profileNodeModules) {
+  constructor(ctx, getConfig, nodeModulesCandidates) {
     this.ctx = ctx
     this.getConfig = getConfig
-    this.profileNodeModules = profileNodeModules
+    this.nodeModulesCandidates = Array.isArray(nodeModulesCandidates) ? nodeModulesCandidates.filter(Boolean) : []
     this.state = {
       phase: 'idle',
       lastSyncAt: null,
@@ -141,9 +142,27 @@ export class SyncEngine {
   }
 
   #packBuffer(name) {
-    const dir = path.join(this.profileNodeModules, name)
-    const data = packDirectory(dir)
-    return { data, size: data.length, sha256: createHash('sha256').update(data).digest('hex') }
+    // The plugin may physically live in the profile's node_modules (GitHub /
+    // registry install) or in a linked workspace checkout during development;
+    // probe every candidate root instead of assuming one location.
+    const tried = []
+    for (const base of this.nodeModulesCandidates) {
+      const dir = path.join(base, name)
+      let stat
+      try {
+        stat = fs.statSync(dir)
+      } catch {
+        tried.push(dir)
+        continue
+      }
+      if (!stat.isDirectory()) {
+        tried.push(dir)
+        continue
+      }
+      const data = packDirectory(dir)
+      return { data, size: data.length, sha256: createHash('sha256').update(data).digest('hex') }
+    }
+    throw new Error(`在本机未找到插件目录 ${name}；已尝试 ${tried.join(' , ') || '(无候选目录)'}`)
   }
 
   #begin(direction) {
