@@ -6,6 +6,7 @@
 
 import { createHash, randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
+import { statSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { WebDavClient, davFileName } from './webdav.js'
@@ -153,19 +154,16 @@ export class SyncEngine {
     const tried = []
     for (const base of this.nodeModulesCandidates) {
       const dir = path.join(base, name)
-      let stat
       try {
-        stat = fs.statSync(dir)
-      } catch {
-        tried.push(dir)
-        continue
+        if (!statSync(dir).isDirectory()) {
+          tried.push(`${dir} (not a directory)`)
+          continue
+        }
+        const data = packDirectory(dir)
+        return { data, size: data.length, sha256: createHash('sha256').update(data).digest('hex') }
+      } catch (error) {
+        tried.push(`${dir} (${error?.code ?? error?.message ?? 'unknown'})`)
       }
-      if (!stat.isDirectory()) {
-        tried.push(dir)
-        continue
-      }
-      const data = packDirectory(dir)
-      return { data, size: data.length, sha256: createHash('sha256').update(data).digest('hex') }
     }
     throw new Error(`在本机未找到插件目录 ${name}；已尝试 ${tried.join(' , ') || '(无候选目录)'}`)
   }
